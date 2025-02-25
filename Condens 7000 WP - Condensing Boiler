@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gas Condensing Boiler Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e88e5;
+      --secondary: #26a69a;
+      --warning: #ff9800;
+      --danger: #e53935;
+      --success: #43a047;
+      --dark: #37474f;
+      --light: #f5f5f5;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #f0f2f5;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      background-color: var(--dark);
+      color: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .dashboard-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--success);
+    }
+    .dashboard-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .summary-card {
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .summary-value {
+      font-size: 2rem;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+    .summary-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .chart-container {
+      background-color: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .chart-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: var(--dark);
+    }
+    .alert-section {
+      background-color: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .alert-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: var(--dark);
+    }
+    .alert-list {
+      list-style: none;
+    }
+    .alert-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .alert-badge {
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .alert-badge.warning {
+      background-color: #fff3e0;
+      color: var(--warning);
+    }
+    .alert-badge.resolved {
+      background-color: rgba(34, 197, 94, 0.1);
+      color: var(--success);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.2);
+    }
+    footer {
+      text-align: center;
+      margin-top: 2rem;
+      color: #666;
+      font-size: 0.9rem;
+    }
+    /* FM Services Styles */
+    .contacts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .contact-card {
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      padding: 1rem;
+      border-left: 4px solid var(--primary);
+    }
+    .contact-card h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+      color: var(--dark);
+    }
+    .contact-card p {
+      margin: 0.3rem 0;
+      font-size: 0.9rem;
+    }
+    /* Documentation Styles */
+    .documentation-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .section-title {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      color: var(--dark);
+    }
+    .section-description {
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+    upload-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+    .upload-icon {
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    .upload-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .primary-text {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .secondary-text {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .upload-progress {
+      margin-bottom: 1rem;
+    }
+    .progress-bar {
+      height: 10px;
+      background-color: #eee;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--primary);
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      font-size: 0.9rem;
+      color: #666;
+      text-align: center;
+    }
+    .upload-button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .upload-button:hover {
+      background-color: #1565c0;
+    }
+    .document-filters {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .search-input {
+      flex: 1;
+      padding: 0.5rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .filter-select {
+      padding: 0.5rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .documents-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .document-item {
+      display: flex;
+      align-items: center;
+      background-color: white;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .document-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      margin-right: 1rem;
+    }
+    .document-icon.pdf {
+      background-color: #ffebee;
+      color: #e53935;
+    }
+    .document-icon.image {
+      background-color: #e3f2fd;
+      color: #1e88e5;
+    }
+    .document-icon.certificate {
+      background-color: #e8f5e9;
+      color: #43a047;
+    }
+    .document-info {
+      flex: 1;
+    }
+    .document-info h3 {
+      margin: 0 0 0.3rem 0;
+      font-size: 1rem;
+    }
+    .document-info p {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .document-tag {
+      display: inline-block;
+      background-color: #f5f5f5;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .document-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .action-button {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .action-button.view {
+      background-color: #e3f2fd;
+      color: #1e88e5;
+    }
+    .action-button.view:hover {
+      background-color: #bbdefb;
+    }
+    .action-button.download {
+      background-color: #e8f5e9;
+      color: #43a047;
+    }
+    .action-button.download:hover {
+      background-color: #c8e6c9;
+    }
+    .tab-container {
+      margin-bottom: 1.5rem;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+    .tab.active {
+      border-bottom: 3px solid var(--primary);
+      color: var(--primary);
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="dashboard-title">
+        <h1>Gas Condensing Boiler Dashboard</h1>
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span>System Online</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="tab-container">
+      <div class="tabs">
+        <div class="tab active" data-tab="performance">Performance</div>
+        <div class="tab" data-tab="efficiency">Efficiency</div>
+        <div class="tab" data-tab="maintenance">Maintenance</div>
+        <div class="tab" data-tab="fm-services">FM Services</div>
+        <div class="tab" data-tab="documentation">Documentation</div>
+      </div>
+
+      <div id="performance" class="tab-content active">
+        <div class="dashboard-summary">
+          <div class="summary-card">
+            <div class="summary-value">93.7%</div>
+            <div class="summary-label">Current Efficiency</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">8,760</div>
+            <div class="summary-label">Operating Hours</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">152</div>
+            <div class="summary-label">Cycles Today</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">74°C</div>
+            <div class="summary-label">Average Flow Temperature</div>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-container">
+            <h2 class="chart-title">Monthly Efficiency (%)</h2>
+            <canvas id="efficiencyChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Monthly Gas Consumption (m³)</h2>
+            <canvas id="gasConsumptionChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Operating Hours vs. Outside Temperature</h2>
+            <canvas id="operatingHoursChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Average Flow &amp; Return Temperatures</h2>
+            <canvas id="temperaturesChart"></canvas>
+          </div>
+        </div>
+
+        <div class="alert-section">
+          <h2 class="alert-title">Recent Alerts</h2>
+          <ul class="alert-list">
+            <li class="alert-item">
+              <span class="alert-badge resolved">Resolved</span>
+              <div>
+                <h3>Low Water Pressure</h3>
+                <p>System pressure dropped below 1 bar - Resolved on Feb 22, 2025</p>
+              </div>
+            </li>
+            <li class="alert-item">
+              <span class="alert-badge warning">Warning</span>
+              <div>
+                <h3>Efficiency Decrease</h3>
+                <p>Efficiency decreased by 3.2% compared to previous month</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="efficiency" class="tab-content">
+        <div class="dashboard-summary">
+          <div class="summary-card">
+            <div class="summary-value">93.7%</div>
+            <div class="summary-label">Current Efficiency</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">91.2%</div>
+            <div class="summary-label">Annual Average</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">95.8%</div>
+            <div class="summary-label">Peak Efficiency</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">87.3%</div>
+            <div class="summary-label">Lowest Efficiency</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <h2 class="chart-title">Efficiency vs. Load Factor</h2>
+          <canvas id="efficiencyLoadChart"></canvas>
+        </div>
+      </div>
+
+      <div id="maintenance" class="tab-content">
+        <div class="dashboard-summary">
+          <div class="summary-card">
+            <div class="summary-value">342</div>
+            <div class="summary-label">Days Since Last Service</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">23</div>
+            <div class="summary-label">Days Until Next Service</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">2</div>
+            <div class="summary-label">Pending Alerts</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">12,345</div>
+            <div class="summary-label">Total Cycles</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <h2 class="chart-title">Maintenance Timeline</h2>
+          <canvas id="maintenanceChart"></canvas>
+        </div>
+      </div>
+
+      <div id="fm-services" class="tab-content">
+        <div class="dashboard-summary">
+          <div class="summary-card">
+            <div class="summary-value">97.8%</div>
+            <div class="summary-label">System Uptime</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">£3,245</div>
+            <div class="summary-label">Annual Operating Cost</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">3.2</div>
+            <div class="summary-label">Avg. Response Time (hrs)</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-value">Aug 15</div>
+            <div class="summary-label">Next Certification Due</div>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-container">
+            <h2 class="chart-title">Monthly Operating Costs (£)</h2>
+            <canvas id="operatingCostsChart"></canvas>
+          </div>
+          <div class="chart-container">
+            <h2 class="chart-title">Service Response Times</h2>
+            <canvas id="responseTimesChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <h2 class="chart-title">System Performance vs. Industry Benchmark</h2>
+          <canvas id="benchmarkChart"></canvas>
+        </div>
+
+        <div class="fm-contacts">
+          <h2 class="chart-title">Key Contacts</h2>
+          <div class="contacts-grid">
+            <div class="contact-card">
+              <h3>Primary Service Engineer</h3>
+              <p><strong>Name:</strong> James Smith</p>
+              <p><strong>Phone:</strong> 07700 900123</p>
+              <p><strong>Email:</strong> james.smith@serviceco.com</p>
+              <p><strong>Response SLA:</strong> 4 hours</p>
+            </div>
+            <div class="contact-card">
+              <h3>Emergency Support</h3>
+              <p><strong>Hotline:</strong> 0800 123 4567</p>
+              <p><strong>Reference:</strong> #BLR-2023-0485</p>
+              <p><strong>Response SLA:</strong> 2 hours</p>
+            </div>
+            <div class="contact-card">
+              <h3>Maintenance Supervisor</h3>
+              <p><strong>Name:</strong> Sarah Johnson</p>
+              <p><strong>Phone:</strong> 07700 900456</p>
+              <p><strong>Email:</strong> s.johnson@facilitymgmt.com</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="documentation" class="tab-content">
+        <div class="documentation-container">
+          <div class="upload-section">
+            <h2 class="section-title">Upload Documents</h2>
+            <p class="section-description">Upload O&amp;M manuals, images, certificates, and other documentation related to this boiler.</p>
+            <div class="upload-box">
+              <input type="file" id="document-upload" class="file-input" multiple />
+              <label for="document-upload" class="upload-label">
+                <div class="upload-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <div class="upload-text">
+                  <span class="primary-text">Choose files or drag &amp; drop</span>
+                  <span class="secondary-text">PDF, JPG, PNG, DOC, DOCX (Max 25MB)</span>
+                </div>
+              </label>
+            </div>
+            <div class="upload-progress" id="upload-progress" style="display: none;">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+              <div class="progress-text">Uploading... <span id="progress-percentage">0%</span></div>
+            </div>
+            <button id="upload-button" class="upload-button">Upload Files</button>
+          </div>
+
+          <div class="documents-section">
+            <h2 class="section-title">Uploaded Documents</h2>
+            <div class="document-filters">
+              <input type="text" placeholder="Search documents..." class="search-input" />
+              <select class="filter-select">
+                <option value="all">All Documents</option>
+                <option value="manuals">Operation Manuals</option>
+                <option value="certificates">Certificates</option>
+                <option value="images">Images</option>
+                <option value="reports">Reports</option>
+                <option value="guides">Guides</option>
+              </select>
+            </div>
+            <div class="documents-list">
+              <!-- O&M Manual with PDF link -->
+              <div class="document-item">
+                <div class="document-icon pdf">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h3>Operation &amp; Maintenance Manual</h3>
+                  <p>Last updated: Jan 15, 2025</p>
+                  <span class="document-tag">Manual</span>
+                </div>
+                <div class="document-actions">
+                  <a href="https://asset.source.thenbs.com/api/pdf/7ecbe984-4b5d-45c4-926b-951cf549b6cb" target="_blank" class="action-button view">View</a>
+                  <button class="action-button download">Download</button>
+                </div>
+              </div>
+              
+              <!-- Boiler Images with new link -->
+              <div class="document-item">
+                <div class="document-icon image">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h3>Boiler Images</h3>
+                  <p>Last updated: Dec 10, 2024</p>
+                  <span class="document-tag">Images</span>
+                </div>
+                <div class="document-actions">
+                  <a href="https://www.bosch-industrial.com/gb/en/ocs/commercial-industrial/condens-7000-wp-50---145kw--19094645-p/" target="_blank" class="action-button view">View</a>
+                  <button class="action-button download">Download</button>
+                </div>
+              </div>
+              
+              <!-- EPC with new link -->
+              <div class="document-item">
+                <div class="document-icon certificate">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                    <path d="M9 3v18"></path>
+                    <path d="M15 3v18"></path>
+                    <path d="M3 9h18"></path>
+                    <path d="M3 15h18"></path>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h3>EPC</h3>
+                  <p>Last updated: Nov 5, 2024</p>
+                  <span class="document-tag">Certificate</span>
+                </div>
+                <div class="document-actions">
+                  <a href="https://b5-web-product-data-service.azurewebsites.net/label/en-GB/600/7736702194.png" target="_blank" class="action-button view">View</a>
+                  <button class="action-button download">Download</button>
+                </div>
+              </div>
+              
+              <!-- Technical and Specification Guide -->
+              <div class="document-item">
+                <div class="document-icon pdf">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h3>Technical &amp; Specification Guide</h3>
+                  <p>Last updated: [Update Date]</p>
+                  <span class="document-tag">Guide</span>
+                </div>
+                <div class="document-actions">
+                  <a href="https://www.bosch-industrial.com/ocsmedia/optimized/full/o563999v272_Condens_7000_WP_Tech_Spec_.pdf" target="_blank" class="action-button view">View</a>
+                  <button class="action-button download">Download</button>
+                </div>
+              </div>
+              
+              <!-- Installer Guide -->
+              <div class="document-item">
+                <div class="document-icon pdf">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </div>
+                <div class="document-info">
+                  <h3>Installer Guide</h3>
+                  <p>Last updated: [Update Date]</p>
+                  <span class="document-tag">Guide</span>
+                </div>
+                <div class="document-actions">
+                  <a href="https://www.bosch-industrial.com/ocsmedia/optimized/full/o563998v272_Condens_7000_WP__Installer_Brochure.pdf" target="_blank" class="action-button view">View</a>
+                  <button class="action-button download">Download</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Gas Condensing Boiler Monitoring System - Last updated: Feb 25, 2025</p>
+    </footer>
+  </div>
+
+  <script>
+    // Tab functionality
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabId = tab.getAttribute('data-tab');
+
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+
+        // Trigger chart resize/re-render when tab is clicked
+        window.dispatchEvent(new Event('resize'));
+      });
+    });
+
+    // Generate dummy data for the past year
+    function generateMonthlyData(min, max, trend = 'none') {
+      const data = [];
+      const currentDate = new Date();
+      const months = [];
+
+      for (let i = 0; i < 12; i++) {
+        const month = new Date(currentDate.getFullYear(), currentDate.getMonth() - 11 + i, 1);
+        months.push(month.toLocaleString('default', { month: 'short' }));
+
+        let value;
+        if (trend === 'increasing') {
+          value = min + ((max - min) * (i / 11)) + (Math.random() * (max - min) / 5 - (max - min) / 10);
+        } else if (trend === 'decreasing') {
+          value = max - ((max - min) * (i / 11)) + (Math.random() * (max - min) / 5 - (max - min) / 10);
+        } else if (trend === 'seasonal') {
+          const seasonalIndex = (i < 2 || i > 9) ? 0.8 : (i > 4 && i < 8) ? 0.2 : 0.5;
+          value = min + (max - min) * seasonalIndex + (Math.random() * (max - min) / 8);
+        } else {
+          value = min + Math.random() * (max - min);
+        }
+
+        data.push(Math.round(value * 10) / 10);
+      }
+
+      return { months, data };
+    }
+
+    // Efficiency Chart
+    const efficiencyData = generateMonthlyData(87, 96, 'decreasing');
+    new Chart(document.getElementById('efficiencyChart'), {
+      type: 'line',
+      data: {
+        labels: efficiencyData.months,
+        datasets: [{
+          label: 'Efficiency (%)',
+          data: efficiencyData.data,
+          borderColor: '#1e88e5',
+          backgroundColor: 'rgba(30, 136, 229, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          y: {
+            min: 85,
+            max: 100,
+            ticks: {
+              callback: function(value) { return value + '%'; }
+            }
+          }
+        }
+      }
+    });
+
+    // Gas Consumption Chart
+    const gasConsumptionData = generateMonthlyData(150, 450, 'seasonal');
+    new Chart(document.getElementById('gasConsumptionChart'), {
+      type: 'bar',
+      data: {
+        labels: gasConsumptionData.months,
+        datasets: [{
+          label: 'Gas Consumption (m³)',
+          data: gasConsumptionData.data,
+          backgroundColor: 'rgba(38, 166, 154, 0.7)'
+        }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    });
+
+    // Operating Hours vs Outside Temperature
+    const hoursData = generateMonthlyData(200, 500, 'seasonal');
+    const temperatureData = generateMonthlyData(2, 25, 'seasonal');
+    new Chart(document.getElementById('operatingHoursChart'), {
+      type: 'line',
+      data: {
+        labels: hoursData.months,
+        datasets: [
+          {
+            label: 'Operating Hours',
+            data: hoursData.data,
+            borderColor: '#e53935',
+            backgroundColor: 'rgba(229, 57, 53, 0.1)',
+            yAxisID: 'y',
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Avg. Outside Temp (°C)',
+            data: temperatureData.data,
+            borderColor: '#ff9800',
+            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+            yAxisID: 'y1',
+            tension: 0.3,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Hours' } },
+          y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: '°C' }, grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+
+    // Flow and Return Temperatures
+    const flowTempData = generateMonthlyData(70, 85, 'seasonal');
+    const returnTempData = generateMonthlyData(40, 55, 'seasonal');
+    new Chart(document.getElementById('temperaturesChart'), {
+      type: 'line',
+      data: {
+        labels: flowTempData.months,
+        datasets: [
+          {
+            label: 'Flow Temperature (°C)',
+            data: flowTempData.data,
+            borderColor: '#e53935',
+            backgroundColor: 'rgba(229, 57, 53, 0.1)',
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Return Temperature (°C)',
+            data: returnTempData.data,
+            borderColor: '#1e88e5',
+            backgroundColor: 'rgba(30, 136, 229, 0.1)',
+            tension: 0.3,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: { y: { title: { display: true, text: 'Temperature (°C)' } } }
+      }
+    });
+
+    // Efficiency vs Load Factor Chart
+    const loadData = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    const efficiencyVsLoadData = [84.5, 87.2, 90.1, 92.3, 93.8, 94.5, 94.2, 93.7, 92.8, 91.5];
+    new Chart(document.getElementById('efficiencyLoadChart'), {
+      type: 'line',
+      data: {
+        labels: loadData.map(load => load + '%'),
+        datasets: [{
+          label: 'Efficiency',
+          data: efficiencyVsLoadData,
+          borderColor: '#1e88e5',
+          backgroundColor: 'rgba(30, 136, 229, 0.1)',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          x: { title: { display: true, text: 'Load Factor' } },
+          y: { title: { display: true, text: 'Efficiency (%)' }, min: 80, max: 100 }
+        }
+      }
+    });
+
+    // Maintenance Timeline
+    const maintenanceLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const maintenanceEvents = [
+      { x: 'Jan', y: 1 },
+      { x: 'Apr', y: 1 },
+      { x: 'Jul', y: 1 },
+      { x: 'Oct', y: 1 },
+      { x: 'Mar', y: 0.5 },
+      { x: 'Jun', y: 0.5 },
+      { x: 'Aug', y: 0.5 },
+      { x: 'Nov', y: 0.5 }
+    ];
+    new Chart(document.getElementById('maintenanceChart'), {
+      type: 'bar',
+      data: {
+        labels: maintenanceLabels,
+        datasets: [
+          {
+            label: 'Major Service',
+            data: maintenanceEvents.filter(event => event.y === 1).map(event => ({ x: event.x, y: event.y })),
+            backgroundColor: '#e53935'
+          },
+          {
+            label: 'Minor Service/Inspection',
+            data: maintenanceEvents.filter(event => event.y === 0.5).map(event => ({ x: event.x, y: event.y })),
+            backgroundColor: '#ff9800'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+          y: { beginAtZero: true, max: 1.2, ticks: { display: false } }
+        }
+      }
+    });
+
+    // FM Services charts - Operating Costs
+    const operatingCostData = generateMonthlyData(200, 450, 'seasonal');
+    new Chart(document.getElementById('operatingCostsChart'), {
+      type: 'bar',
+      data: {
+        labels: operatingCostData.months,
+        datasets: [
+          {
+            label: 'Operating Costs (£)',
+            data: operatingCostData.data,
+            backgroundColor: function(context) {
+              const index = context.dataIndex;
+              const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, 400);
+              gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+              gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+              return gradient;
+            },
+            borderRadius: 6,
+            borderWidth: 0
+          },
+          {
+            label: 'Maintenance Budget (£)',
+            data: operatingCostData.data.map(value => value * 0.7 + Math.random() * 50),
+            backgroundColor: function(context) {
+              const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, 400);
+              gradient.addColorStop(0, 'rgba(16, 185, 129, 0.8)');
+              gradient.addColorStop(1, 'rgba(16, 185, 129, 0.2)');
+              return gradient;
+            },
+            borderRadius: 6,
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+          tooltip: {
+            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+            titleFont: { size: 13 },
+            bodyFont: { size: 12 },
+            padding: 12,
+            cornerRadius: 8
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { borderDash: [3, 3] }, beginAtZero: true }
+        }
+      }
+    });
+
+    // Response times chart
+    const responseTimeData = [
+      { category: 'Emergency', actual: 1.8, sla: 2, previousMonth: 2.1 },
+      { category: 'Urgent', actual: 3.2, sla: 4, previousMonth: 3.5 },
+      { category: 'Normal', actual: 11.5, sla: 24, previousMonth: 14.2 },
+      { category: 'Low Priority', actual: 36.2, sla: 48, previousMonth: 42.8 }
+    ];
+    new Chart(document.getElementById('responseTimesChart'), {
+      type: 'bar',
+      data: {
+        labels: responseTimeData.map(d => d.category),
+        datasets: [
+          {
+            label: 'Actual Response Time (hrs)',
+            data: responseTimeData.map(d => d.actual),
+            backgroundColor: function(context) {
+              const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, 400);
+              gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+              gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+              return gradient;
+            },
+            borderRadius: 6,
+            borderWidth: 0
+          },
+          {
+            label: 'Previous Month (hrs)',
+            data: responseTimeData.map(d => d.previousMonth),
+            backgroundColor: function(context) {
+              const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, 400);
+              gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)');
+              gradient.addColorStop(1, 'rgba(99, 102, 241, 0.2)');
+              return gradient;
+            },
+            borderRadius: 6,
+            borderWidth: 0
+          },
+          {
+            label: 'SLA Target (hrs)',
+            data: responseTimeData.map(d => d.sla),
+            type: 'line',
+            borderColor: 'rgba(239, 68, 68, 0.8)',
+            backgroundColor: 'rgba(239, 68, 68, 0.05)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointStyle: 'star',
+            pointRadius: 5,
+            pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+          tooltip: {
+            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+            titleFont: { size: 13 },
+            bodyFont: { size: 12 },
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              afterLabel: function(context) {
+                const index = context.dataIndex;
+                const sla = responseTimeData[index].sla;
+                if (context.dataset.label === 'Actual Response Time (hrs)') {
+                  const diff = ((sla - responseTimeData[index].actual) / sla * 100).toFixed(1);
+                  return diff + '% better than SLA target';
+                }
+                return '';
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            grid: { borderDash: [3, 3] },
+            beginAtZero: true,
+            title: { display: true, text: 'Hours', font: { size: 12, weight: 'normal' } }
+          }
+        }
+      }
+    });
+
+    // Benchmark chart
+    const benchmarkLabels = ['Efficiency', 'Energy Use', 'Response Time', 'Uptime', 'Maintenance Cost'];
+    const benchmarkData = {
+      system: [93.5, 85.2, 95.8, 97.2, 90.5],
+      industry: [89.2, 78.5, 86.3, 94.8, 82.1]
+    };
+    setTimeout(() => {
+      new Chart(document.getElementById('benchmarkChart'), {
+        type: 'radar',
+        data: {
+          labels: benchmarkLabels,
+          datasets: [
+            {
+              label: 'Your System',
+              data: benchmarkData.system,
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              borderColor: '#3b82f6',
+              pointBackgroundColor: '#3b82f6',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: '#3b82f6',
+              borderWidth: 2
+            },
+            {
+              label: 'Industry Average',
+              data: benchmarkData.industry,
+              backgroundColor: 'rgba(100, 116, 139, 0.2)',
+              borderColor: '#64748b',
+              pointBackgroundColor: '#64748b',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: '#64748b',
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+            tooltip: {
+              backgroundColor: 'rgba(17, 24, 39, 0.9)',
+              titleFont: { size: 13 },
+              bodyFont: { size: 12 },
+              padding: 12,
+              cornerRadius: 8
+            }
+          },
+          scales: {
+            r: {
+              angleLines: { display: true, color: 'rgba(0, 0, 0, 0.1)' },
+              grid: { color: 'rgba(0, 0, 0, 0.05)' },
+              pointLabels: { font: { size: 12, weight: '500' } },
+              suggestedMin: 50,
+              suggestedMax: 100,
+              ticks: {
+                backdropColor: 'transparent',
+                color: 'rgba(0, 0, 0, 0.5)',
+                font: { size: 10 }
+              }
+            }
+          }
+        }
+      });
+    }, 100);
+
+    // Document upload functionality (simulated client-side)
+    const fileInput = document.getElementById('document-upload');
+    const uploadButton = document.getElementById('upload-button');
+    const progressContainer = document.getElementById('upload-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercentage = document.getElementById('progress-percentage');
+
+    uploadButton.addEventListener('click', () => {
+      const files = fileInput.files;
+      if (files.length === 0) {
+        alert('Please select files to upload');
+        return;
+      }
+
+      // Simulate upload
+      progressContainer.style.display = 'block';
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress > 100) progress = 100;
+        progressFill.style.width = `${progress}%`;
+        progressPercentage.textContent = `${Math.round(progress)}%`;
+
+        if (progress === 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            alert('Files uploaded successfully!');
+            progressContainer.style.display = 'none';
+            fileInput.value = '';
+
+            // Update the documents list with new uploads.
+            // Note: For persistent storage, a backend service is required.
+            const documentsList = document.querySelector('.documents-list');
+            const newDoc = document.createElement('div');
+            newDoc.className = 'document-item';
+            newDoc.innerHTML = `
+              <div class="document-icon pdf">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </div>
+              <div class="document-info">
+                <h3>${Array.from(files).map(f => f.name).join(', ')}</h3>
+                <p>Last updated: ${new Date().toLocaleDateString()}</p>
+                <span class="document-tag">New Upload</span>
+              </div>
+              <div class="document-actions">
+                <button class="action-button view">View</button>
+                <button class="action-button download">Download</button>
+              </div>
+            `;
+            documentsList.prepend(newDoc);
+          }, 500);
+        }
+      }, 200);
+    });
+
+    // Document filter functionality
+    const filterSelect = document.querySelector('.filter-select');
+    const searchInput = document.querySelector('.search-input');
+    const documentItems = document.querySelectorAll('.document-item');
+
+    if (filterSelect) {
+      filterSelect.addEventListener('change', () => {
+        const filterValue = filterSelect.value;
+        Array.from(documentItems).forEach(item => {
+          const tag = item.querySelector('.document-tag').textContent.toLowerCase();
+          item.style.display = (filterValue === 'all' || tag.includes(filterValue.toLowerCase())) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const searchValue = searchInput.value.toLowerCase();
+        Array.from(documentItems).forEach(item => {
+          const title = item.querySelector('h3').textContent.toLowerCase();
+          item.style.display = title.includes(searchValue) ? 'flex' : 'none';
+        });
+      });
+    }
+
+    // Ensure charts render properly in all tabs
+    document.addEventListener('DOMContentLoaded', function() {
+      tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 100);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
